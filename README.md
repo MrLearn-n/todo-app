@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Список задач (To-Do List)
 
-## Getting Started
+Простое и аккуратное веб-приложение для списка задач на **Next.js 16 + React 19 + TypeScript +
+shadcn/ui**.
 
-First, run the development server:
+**Демо:** _ссылка появится после деплоя_
+
+## Возможности
+
+Обязательные по заданию:
+
+- ✅ Добавление задач (Enter или кнопка «Добавить»; пустые строки игнорируются)
+- ✅ Отметка выполненных задач
+- ✅ Удаление задач
+- ✅ Сохранение после перезагрузки страницы (`localStorage`)
+
+Дополнительно:
+
+- ✏️ Редактирование задачи: кнопка с карандашом или двойной клик. Enter сохраняет, Esc отменяет
+- 🔎 Вкладки-фильтры: «Все», «Активные», «Выполненные»
+- 🧹 Счётчик оставшихся задач (с русской плюрализацией) и «Очистить выполненные»
+- 🔄 Синхронизация между вкладками браузера
+- 🌗 Светлая и тёмная тема по системным настройкам
+- 📱 Адаптивная вёрстка, доступность с клавиатуры и для скринридеров
+- 🛡️ Устойчивость к повреждённым данным в `localStorage` и к недоступному хранилищу
+
+## Стек
+
+| Задача    | Инструмент                                                |
+| --------- | --------------------------------------------------------- |
+| Фреймворк | Next.js 16 (App Router, Turbopack), React 19              |
+| Язык      | TypeScript (strict)                                       |
+| UI        | shadcn/ui (Base UI), Tailwind CSS v4, иконки lucide-react |
+| Тесты     | Vitest (на базе Vite) + Testing Library + jsdom           |
+| Качество  | ESLint (`eslint-config-next`), Prettier                   |
+
+> Почему и Next.js, и Vite? Next.js собирает само приложение (Turbopack), а Vite работает
+> внутри Vitest, быстрого тест-раннера.
+
+## Быстрый старт
+
+Требуется Node.js 20.19+ (рекомендуется 24).
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откройте http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Скрипты
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Команда              | Что делает                           |
+| -------------------- | ------------------------------------ |
+| `npm run dev`        | Dev-сервер с hot reload              |
+| `npm run build`      | Production-сборка                    |
+| `npm start`          | Запуск production-сборки             |
+| `npm test`           | Прогон тестов                        |
+| `npm run test:watch` | Тесты в watch-режиме                 |
+| `npm run lint`       | ESLint                               |
+| `npm run typecheck`  | Проверка типов TypeScript            |
+| `npm run format`     | Форматирование Prettier              |
+| `npm run check`      | Всё сразу: lint, типы, формат, тесты |
 
-## Learn More
+## Структура проекта
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                   # layout, page, globals.css (токены темы)
+├── components/
+│   ├── ui/                # примитивы shadcn/ui
+│   ├── TaskManager.tsx   # корневой клиентский компонент
+│   ├── AddTaskForm.tsx  # поле ввода + кнопка «Добавить»
+│   ├── TaskList.tsx      # список или пустое состояние
+│   ├── TaskItem.tsx      # задача: чекбокс, редактирование, удаление
+│   └── TaskSummary.tsx   # счётчик и «Очистить выполненные»
+├── hooks/useTasks.ts     # подписка React на стор
+└── lib/
+    ├── tasks.ts           # тип Task и чистые функции над списком
+    ├── task-storage.ts    # сериализация и безопасный парсинг localStorage
+    ├── task-store.ts      # стор: состояние, сохранение, синхронизация вкладок
+    └── plural.ts          # русская плюрализация через Intl.PluralRules
+tests/                     # тесты, повторяют структуру src/
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Архитектура
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Бизнес-логика отделена от UI.** Операции над списком — чистые иммутабельные функции в
+  `lib/tasks.ts`. Их легко читать и тестировать без React.
+- **Состояние живёт во внешнем сторе**, React подписывается на него через `useSyncExternalStore`.
+  Это даёт три вещи: нет ошибок гидрации (на сервере `localStorage` нет, поэтому показывается
+  скелетон), нет вспышки пустого списка при загрузке, и работает синхронизация между вкладками
+  через событие `storage`.
+- **Хранилище считается недоверенным.** Данные из `localStorage` проверяются type guard'ом, битые
+  записи отбрасываются. Если запись невозможна (переполнение, приватный режим), приложение продолжает
+  работать в памяти.
+- **Зависимости внедряются.** `TaskManager` принимает стор пропом, а `createTaskStore` —
+  хранилище (по умолчанию `localStorage`). Поэтому каждый тест работает с изолированным стором.
 
-## Deploy on Vercel
+## Тесты
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+41 тест в 5 файлах, все в папке `tests/`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `lib/tasks.test.ts`: чистые функции над списком
+- `lib/task-storage.test.ts`: парсинг, включая битый JSON и невалидные записи
+- `lib/task-store.test.ts`: сохранение, подписки, синхронизация вкладок, отказ хранилища
+- `lib/plural.test.ts`: русская плюрализация
+- `components/TaskManager.test.tsx`: пользовательские сценарии через Testing Library (добавить,
+  отметить, удалить, отредактировать, отфильтровать, восстановить после перезагрузки)
+
+```bash
+npm test
+```
+
+## Деплой
+
+Приложение полностью статическое, поэтому деплоится на Vercel без настроек: импортируйте
+репозиторий на [vercel.com/new](https://vercel.com/new).
+
+## Использованные AI-инструменты
+
+Проект сделан с помощью **[Claude Code](https://claude.com/claude-code)** (модель Claude Opus 5.5)
+в VS Code. Claude Code сгенерировал структуру проекта, код, тесты и документацию, прогнал линтер,
+тесты и сборку и проверил вёрстку по скриншотам на десктопе и мобильном в обеих темах. Я задавал
+стек, требования и архитектурные правила и ревьюил результат.
